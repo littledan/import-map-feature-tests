@@ -126,7 +126,7 @@ In WebAssembly, features can be tested imperatively using the [`WebAssembly.vali
 
 In the context of the [WebAssembly/ESM integration proposal](https://github.com/webassembly/esm-integration), module specifiers can directly map to WebAssembly modules. When importing a WebAssembly module as an ES module, there's no particular chance to do these imperative `validate` checks.
 
-The X Framework has an image processing component which needs to `memcpy` some large ranges. It has compiled two different WebAssembly modules, one which uses the new feature `"/image.wasm"` and one which does not `"/image-legacy.wasm"`. Imagine that the string `"nf0q29843n0vq340nfwe"` is the result of base-64 encoding a WebAssembly module which exercises the `memcpy` feature. The image processing component would include the following in its import map, to choose the right Wasm module:
+The X Framework has an image processing component which needs to copy the memory backing some large ranges. It has compiled two different WebAssembly modules, one which uses the new feature proposal `"/image.wasm"` and one which does not `"/image-legacy.wasm"`. Imagine that the string `"nf0q29843n0vq340nfwe"` is the result of base-64 encoding a WebAssembly module which exercises the `memcpy` feature. The image processing component would include the following in its import map, to choose the right Wasm module:
 
 ```json
 {
@@ -138,6 +138,8 @@ The X Framework has an image processing component which needs to `memcpy` some l
   }
 }
 ```
+
+On browsers without the new bulk memory instruction, the WebAssembly binary will fail to validate because it calls an undefined instruction, and the legacy alternative will be selected.
 
 ### Customized built-in elements
 
