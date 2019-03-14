@@ -7,7 +7,7 @@ The [import maps proposal](https://github.com/wicg/import-maps/) introduces the 
 
 ## Example scenarios
 
-*All browser names have been changed in the following examples; any resemblance to currently developed browsers is purely accidental.*
+*Any resemblance to currently developed browsers is purely accidental.*
 
 Let's imagine that there are three popular rendering engines under active development: Mosaic, Lynx, and HotJava. They're all doing a great job participating in web standards, implementing emerging standards when it makes sense, rapidly distributing new browser versions to web users, etc. However, sometimes, one ships a feature before another.
 
@@ -32,7 +32,7 @@ As part of the X Framework's build process, it puts it in two directories: `js-n
 
 ### `Intl.RelativeTimeFormat`
 
-HotJava was the first to implement and ship the entire [`Intl.RelativeTimeFormat` proposal](https://github.com/tc39/proposal-intl-relative-time/). Then, Lynx shipped most of it, but omitting the [`Intl.RelativeTimeFormat.prototype.formatToParts` method](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RelativeTimeFormat/formatToParts). Meanwhile, it looks like it'll take a little longer to get an implementation done in Mosaic. Framework X wants to use `Intl.RelativeTimeFormat`, but it'd like to avoid shipping a full polyfill to all users. And for Lynx users, it'd be best to ship just the polyfill for the one missing method.
+HotJava was the first to implement and ship the entire [`Intl.RelativeTimeFormat` proposal](https://github.com/tc39/proposal-intl-relative-time/). Then, Lynx shipped most of it, but omitting the [`Intl.RelativeTimeFormat.prototype.formatToParts` method](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RelativeTimeFormat/formatToParts). Meanwhile, it looks like it'll take a little longer to get an implementation done in Mosaic. The X Framework wants to use `Intl.RelativeTimeFormat`, but it'd like to avoid shipping a full polyfill to all users. And for Lynx users, it'd be best to ship just the polyfill for the one missing method.
 
 The X Framework's Widget component makes heavy use of `Intl.RelativeTimeFormat`. To support Mosaic, Lynx and HotJava well, it includes both a full polyfill in `"/intl-relative-time-format.mjs"`, as well as a polyfill which just adds `formatToParts` based on the built-in library in `"/intl-relative-time-format-to-parts.mjs"`. There's an empty module at `"/empty.mjs"`. These are selected as follows:
 
@@ -40,8 +40,20 @@ The X Framework's Widget component makes heavy use of `Intl.RelativeTimeFormat`.
 {
   "imports": {
     "intl-relative-time-format": [
-      { "if": { "global": "Intl", "property": "RelativeTimeFormat.prototype.formatToParts" }, "then": "/empty.mjs" },
-      { "if": { "global": "Intl", "property": "RelativeTimeFormat" }, "then": "/intl-relative-time-format-to-parts.mjs" },
+      {
+        "if": {
+          "global": "Intl",
+          "property": "RelativeTimeFormat.prototype.formatToParts"
+        },
+        "then": "/empty.mjs"
+      },
+      {
+        "if": {
+          "global": "Intl",
+          "property": "RelativeTimeFormat"
+        },
+        "then": "/intl-relative-time-format-to-parts.mjs"
+      },
       "/intl-relative-time-format.mjs"
     ]
   }
@@ -66,7 +78,10 @@ The widget is included using `<script type=module src="/calculator.mjs"></script
       "/calculator-jsbi.mjs"
     ],
     "/bigint-to-locale-string-polyfill.mjs": [
-      { "if": { "global": "BigInt", "property": "prototype.toLocaleString" }, "then": "/empty.mjs" },
+      {
+        "if": { "global": "BigInt", "property": "prototype.toLocaleString" },
+        "then": "/empty.mjs"
+      },
       "/bigint-to-locale-string-polyfill.mjs"
     ]
   }
@@ -83,9 +98,12 @@ The X Framework makes use of `std:temporal` all over the place, and quickly adop
 
 ```json
 {
-  "imports" {
+  "imports": {
     "std:temporal": [
-      { "if": { "module": "std:temporal", "exports": "Duration" }, "then": "std:temporal" },
+      {
+        "if": { "module": "std:temporal", "exports": "Duration" },
+        "then": "std:temporal"
+      },
       { "if": { "module": "std:temporal" }, "then": "./duration-wrapper.mjs" },
       "./full-temporal-polyfill.mjs"
     ]
@@ -123,7 +141,7 @@ The X Framework has an image processing component which needs to `memcpy` some l
 
 ### Customized built-in elements
 
-Everyone's talking about custom elements, and Framework X works to build on them as closely as possible, helping it to be lightweight, efficient and composable. Mosaic, Lynx and HotJava all implement [autonomous custom elements](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#Autonomous_custom_elements), but [customized built-in elements](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#Customized_built-in_elements) is only supported by Mosaic and HotJava at the moment. The X Framework wants to use customized built-in elements for improved initial render time and accessibility in its component library, and use alternative, lengthy, component-specific JavaScript logic when this is not possible.
+Everyone's talking about custom elements, and the X Framework works to build on them as closely as possible, helping it to be lightweight, efficient and composable. Mosaic, Lynx and HotJava all implement [autonomous custom elements](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#Autonomous_custom_elements), but [customized built-in elements](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#Customized_built-in_elements) is only supported by Mosaic and HotJava at the moment. The X Framework wants to use customized built-in elements for improved initial render time and accessibility in its component library, and use alternative, lengthy, component-specific JavaScript logic when this is not possible.
 
 The X Framework's component library includes some components that, internally, use customized built-in elements. The component `"/component.mjs"` has a fallback `"/component-legacy.mjs"` for when customized built-in elements are not available. The import map includes the following:
 
@@ -131,7 +149,14 @@ The X Framework's component library includes some components that, internally, u
 {
   "imports": {
     "/component.mjs": [
-      { "if": { "global": "customElements", "property": "define", "option": "extend" }, "then": "./component.mjs" },
+      {
+        "if": {
+          "global": "customElements",
+          "property": "define",
+          "option": "extend"
+        },
+        "then": "./component.mjs"
+      },
       "./component-legacy.mjs"
     ]
   }
