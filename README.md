@@ -173,11 +173,15 @@ To check whether a module with a particular module specifier exists, for a modul
 
 `{ "module": "std:name" }`
 
+These module tests are checking if the module is present *after* import maps, as a built-in module.
+
 ### JavaScript parses
 
 To check whether a particular JavaScript expression parses, for a JavaScript source string (interpreted as a module) `"module"`, use:
 
 `{ "javascript-valid": "module" }`
+
+No JavaScript is executed here--a typical JavaScript "preparser" to catch syntax errors would be enough here, rather than a full parser generating bytecode.
 
 ### WebAssembly validates
 
@@ -197,7 +201,7 @@ To check whether a property of the global object `Interface` exists, use:
 
 `{ "global": "Interface" }`
 
-Note that this would include things like attributes operations on the global object, not just interfaces.
+Note that this would include things like attributes operations on the global object, not just interfaces. Even if this property of the global object is a getter with a side effect, the getter is not run here--it is just checked whether the global object has such a property (including through its prototype chain, but not including anything which is populated based on the document, such as the named properties object).
 
 ### Module export or global has a property
 
@@ -207,7 +211,7 @@ To check whether a module `"std:name"`'s export of the name `"exp"` has a proper
 
 This can be used for nested properties (separated by `.`), and properties of globals as well.
 
-The semantics of this are a bit complicated to define (since it should cover both JS-style specs and WebIDL), but it's meant to roughly correspond to, "Would this chain of property accesses exist when run in a new environment?".
+The semantics of this are a bit complicated to define (since it should cover both JS-style specs and WebIDL), but it's meant to roughly correspond to, "Would this chain of property accesses exist when run in a new environment?". No JavaScript is run when this test happens--it is simply checking whether the name is present in a listing that could be pre-computed and sent to another process.
 
 ### Options bag entries
 
@@ -217,7 +221,7 @@ To check whether a particular method reads a particular property from an options
 
 `"option"` can also be used with globals, properties, etc.
 
-Semantics here are also a bit complicated, but roughly correspond to, "Does this method read a property with this name off of the last parameter of the method?".
+Semantics here are also a bit complicated, but roughly correspond to, "Would this method read a property with this name off of the last parameter of the method?". The method is not executed when evaluating this; it would be based on a pre-defined sense of what the method *would* do.
 
 ## Integration into import maps
 
@@ -270,11 +274,23 @@ Import maps are always evaluated within a particular JavaScript realm, so the ex
 
 Whether modules will eventually have feature testing for their contents affects how modules should be designed. For example, if something like this proposal is not adopted, then in the Temporal `Duration` class case, we may want to put `Duration` into a sub-module like `std:temporal/duration` so that it can be polyfilled separately, without needing to load the polyfill in browsers. If that's going to be the eventual shape, then maybe `std:temporal` should be broken up into several tiny modules from the beginning, for each class it exports, for consistency.
 
-However, we believe import maps stands well on its own as an initial feature, and for that reason, this repository describes finer feature tests as a potential follow-on.
+However, import maps stands well on its own as an initial feature, and for that reason, this repository describes finer feature tests as a potential follow-on.
 
 ### Is this efficiently implementable?
 
-This is unclear. The hope would be that the import map remains interpretable by the network process, when scanning for what to fetch. Asking the network process to understand which JavaScript APIs are available, and to parse JavaScript/validate WebAssembly, would be new, and could increase memory usage. If the queries need to be interpreted by the renderer process, startup time may be slower. However, the reduced volume of code fetched, parsed and executed may compensate. More investigation on implementability is needed before concluding that this feature is feasible.
+Efficient implementation is a goal, but whether this proposal meets that goal is unclear. The hope would be that the import map remains interpretable by the network process, when scanning for what to fetch. Asking the network process to understand which JavaScript APIs are available, and to parse JavaScript/validate WebAssembly, would be new, and could increase memory usage. If the queries need to be interpreted by the renderer process, startup time may be slower. However, the reduced volume of code fetched, parsed and executed may compensate. More investigation on implementability is needed before concluding that this feature is feasible.
+
+### Does JavaScript need to be executed in order to evaluate these conditionals? What about the security implications?
+
+The goal is that no JavaScript or WebAssembly would be needed to evaluate any of these conditionals. Getters are not run when checking for globals or properties; functions are not called when checking options. The JavaScript preparser and WebAssembly validator need to be available, and these are complex software components which may have security issues. To check whether globals, properties or options exist, only the list of names are needed.
+
+### Should boolean operators be included?
+
+Maybe, but they would basically be syntactic sugar. "and" can be done with nested conditionals. For "not", just use the next fallback. For "or", two different branches can map to the same thing. For this reason, they are left out of this initial version of this proposal.
+
+### Should the WebAssembly support be based on feature names?
+
+The [Target Features Section](https://github.com/WebAssembly/tool-conventions/blob/master/Linking.md#target-features-section) of the WebAssembly tooling conventions for linking gives names to various WebAssembly features. These could be used, rather than validation, for simpler WebAssembly feature testing. Possibly another thing to add to the language. This draft does not use them, as they have not yet been used in a web standard, but it could be considered for a future draft.
 
 ### Why not just test the User Agent string?
 
